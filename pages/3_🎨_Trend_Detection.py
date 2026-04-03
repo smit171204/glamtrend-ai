@@ -5,13 +5,17 @@ import plotly.express as px
 
 df = pd.read_csv("data/womens_clothing_reviews.csv")
 
+# Clean column names
+df.columns = df.columns.str.strip()
+
 st.title("🎨 Fashion Trend Detection")
 
-text = " ".join(df["Review Text"].astype(str)).lower()
+# FIXED LINE
+text = " ".join(df["Review Text"].fillna("").astype(str)).lower()
 
 colors = [
-"red","blue","black","white","green",
-"pink","yellow","orange","purple","brown"
+    "red","blue","black","white","green",
+    "pink","yellow","orange","purple","brown"
 ]
 
 found = []
@@ -21,11 +25,11 @@ for color in colors:
 
 counter = Counter(found)
 
-color_df = pd.DataFrame(counter.items(),columns=["Color","Count"])
+color_df = pd.DataFrame(counter.items(), columns=["Color","Count"])
 
-fig = px.bar(color_df,x="Color",y="Count",title="Trending Colors in Fashion")
+fig = px.bar(color_df, x="Color", y="Count", title="Trending Colors in Fashion")
 
-st.plotly_chart(fig,use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("Top Trending Clothing Category")
 

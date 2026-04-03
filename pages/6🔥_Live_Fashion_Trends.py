@@ -2,16 +2,31 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from utils.trend_model import predict_trend
+from utils.trend_model import train_model
 
-st.title("🔥 Fashion Trends ")
+st.title("🔥 Fashion Trends")
 
 # -----------------------
 # LOAD DATA
 # -----------------------
 
 df = pd.read_csv("data/womens_clothing_reviews.csv")
-df = df.dropna(subset=["Rating", "Class Name"])
+
+# Clean column names (VERY IMPORTANT)
+df.columns = df.columns.str.strip()
+
+# Drop nulls safely
+df = df.dropna(subset=["Rating", "Class Name", "Recommended IND"])
+
+# -----------------------
+# LOAD MODEL (CACHED)
+# -----------------------
+
+@st.cache_resource
+def load_model():
+    return train_model()
+
+model = load_model()
 
 # -----------------------
 # KPI
@@ -21,7 +36,7 @@ col1, col2, col3 = st.columns(3)
 
 col1.metric("Total Reviews", len(df))
 col2.metric("Avg Rating", round(df["Rating"].mean(), 2))
-col3.metric("Recommendation %", round(df["Recommended IND"].mean()*100, 2))
+col3.metric("Recommendation %", round(df["Recommended IND"].mean() * 100, 2))
 
 st.divider()
 
@@ -34,7 +49,9 @@ st.subheader("🤖 ML Trend Prediction")
 sample = df.sample(10)
 
 for _, row in sample.iterrows():
-    trend = predict_trend(row["Rating"])
+    pred = model.predict([[row["Rating"]]])[0]
+    trend = "🔥 Trending" if pred == 1 else "❄️ Not Trending"
+
     st.write(f"{row['Class Name']} (Rating: {row['Rating']}) → {trend}")
 
 st.divider()
@@ -47,8 +64,8 @@ st.subheader("🏆 Top Trending Categories")
 
 top = df[df["Recommended IND"] == 1]["Class Name"].value_counts().head(5)
 
-for cat, count in top.items():
-    st.success(f"🔥 {cat} ({count} votes)")
+for cat_name, count in top.items():
+    st.success(f"🔥 {cat_name} ({count} votes)")
 
 # -----------------------
 # CHART
@@ -60,9 +77,8 @@ cat = df["Class Name"].value_counts().reset_index()
 cat.columns = ["Category", "Count"]
 
 fig = px.bar(cat.head(10), x="Category", y="Count", color="Count")
+
 st.plotly_chart(fig, use_container_width=True)
-
-
 
 
 

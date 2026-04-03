@@ -4,35 +4,55 @@ import joblib
 import streamlit as st
 import os
 
+MODEL_PATH = "model/logistic_model.pkl"
+DATA_PATH = "data/womens_clothing_reviews.csv"
+
+
+# -----------------------
+# LOAD MODEL (CACHED)
+# -----------------------
 @st.cache_resource
 def load_trend_model():
-    # Cache the pre-trained model so it loads instantly in Streamlit
-    if os.path.exists("model/logistic_model.pkl"):
-        return joblib.load("model/logistic_model.pkl")
+    if os.path.exists(MODEL_PATH):
+        return joblib.load(MODEL_PATH)
     else:
         return train_model()
 
-def train_model():
-    df = pd.read_csv("data/womens_clothing_reviews.csv")
 
+# -----------------------
+# TRAIN MODEL
+# -----------------------
+def train_model():
+    df = pd.read_csv(DATA_PATH)
+
+    # Clean column names (VERY IMPORTANT)
+    df.columns = df.columns.str.strip()
+
+    # Drop nulls safely
     df = df.dropna(subset=["Rating", "Recommended IND"])
 
-    X = df[["Rating"]]
+    # Features & target
+    X = df[["Rating"]]   # ✅ single feature
     y = df["Recommended IND"]
 
+    # Train model
     model = LogisticRegression()
     model.fit(X, y)
-    
+
+    # Save model
     os.makedirs("model", exist_ok=True)
-    joblib.dump(model, "model/logistic_model.pkl")
+    joblib.dump(model, MODEL_PATH)
 
     return model
 
+
+# -----------------------
+# PREDICTION FUNCTION
+# -----------------------
 def predict_trend(rating):
     model = load_trend_model()
-    pred = model.predict([[rating]])[0]
 
-    if pred == 1:
-        return "🔥 Trending"
-    else:
-        return "⚠️ Not Trending"
+    # Ensure correct input shape
+    pred = model.predict([[float(rating)]])[0]
+
+    return "🔥 Trending" if pred == 1 else "❄️ Not Trending"
